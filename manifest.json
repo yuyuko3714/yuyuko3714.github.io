@@ -1,0 +1,9 @@
+{
+  "short_name": "CyberZen",
+  "name": "Cyber Zen — 电子木鱼",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#05060b",
+  "theme_color": "#00ffd5",
+  "icons": []
+}

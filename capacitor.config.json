@@ -1,0 +1,6 @@
+{
+  "appId": "com.example.cyberzen",
+  "appName": "CyberZen",
+  "webDir": ".",
+  "bundledWebRuntime": false
+}

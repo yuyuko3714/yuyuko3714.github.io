@@ -1,0 +1,391 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Cyber Zen — 电子木鱼 / 泡泡纸模拟器</title>
+<link rel="manifest" href="manifest.json">
+<style>
+:root{
+  --bg:#05060b;
+  --accent:#00ffd5;
+  --muted:#9aa5b1;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;
+  font-family: ui-sans-serif, system-ui, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+  background: radial-gradient(circle at 10% 10%, #071023 0%, var(--bg) 40%), var(--bg);
+  color:var(--muted);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
+  overflow:hidden;
+}
+
+/* app shell */
+.app{
+  width:100%;
+  height:100vh;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  position:relative;
+}
+
+/* top counter */
+.counter{
+  position:fixed;
+  top:28px;
+  left:50%;
+  transform:translateX(-50%);
+  color:#ffffff;
+  font-weight:700;
+  font-size:22px;
+  letter-spacing:2px;
+  text-shadow: 0 2px 10px rgba(0,0,0,0.8);
+  background: rgba(255,255,255,0.03);
+  padding:8px 14px;
+  border-radius:10px;
+  border:1px solid rgba(255,255,255,0.04);
+  font-family: "Courier New", monospace;
+}
+
+/* center "muyu" icon */
+.muyu{
+  width:220px;
+  height:220px;
+  border-radius:999px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  cursor:pointer;
+  user-select:none;
+  -webkit-tap-highlight-color:transparent;
+  position:relative;
+  transition: transform 280ms cubic-bezier(.2,.9,.25,1);
+  box-shadow: 0 6px 30px rgba(2,10,20,0.6), inset 0 -6px 20px rgba(0,0,0,0.6);
+  background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(0,0,0,0.15));
+  border: 1px solid rgba(255,255,255,0.04);
+  backdrop-filter: blur(4px);
+}
+.muyu::before{
+  content:'';
+  position:absolute;
+  width:80%;
+  height:80%;
+  border-radius:999px;
+  border:2px solid rgba(255,255,255,0.06);
+  box-shadow: 0 8px 30px rgba(0,255,213,0.03);
+}
+.icon{
+  width:120px;
+  height:120px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  color:#fff;
+  font-size:64px;
+  transform-origin:center;
+}
+
+/* jelly (press) animation via class */
+.pressed{
+  animation: jelly 420ms cubic-bezier(.2,.9,.25,1);
+}
+@keyframes jelly{
+  0%{ transform: scale(1) }
+  30%{ transform: scale(0.86) }
+  50%{ transform: scale(1.03) }
+  70%{ transform: scale(0.97) }
+  100%{ transform: scale(1) }
+}
+
+/* ripple */
+.ripple{
+  position:absolute;
+  border-radius:999px;
+  pointer-events:none;
+  transform: translate(-50%,-50%) scale(0.2);
+  opacity:0.7;
+  border: 1px solid rgba(0,255,213,0.24);
+  box-shadow: 0 0 30px rgba(0,255,213,0.06);
+  animation: ripple 900ms ease-out;
+}
+@keyframes ripple{
+  to{ transform: translate(-50%,-50%) scale(3.8); opacity:0; }
+}
+
+/* floating +1 */
+.floating{
+  position:absolute;
+  color:var(--accent);
+  font-weight:700;
+  font-size:18px;
+  text-shadow:0 2px 6px rgba(0,0,0,0.6);
+  animation: floatUp 1000ms ease-out forwards;
+  -webkit-user-select:none;
+}
+@keyframes floatUp{
+  0%{ transform: translateY(0) scale(0.9); opacity:0 }
+  20%{ opacity:1; transform: translateY(-10px) scale(1.05) }
+  100%{ transform: translateY(-80px) scale(0.9); opacity:0 }
+}
+
+/* bottom controls */
+.controls{
+  position:fixed;
+  bottom:18px;
+  left:50%;
+  transform:translateX(-50%);
+  display:flex;
+  gap:10px;
+  align-items:center;
+  background: rgba(255,255,255,0.02);
+  padding:8px 10px;
+  border-radius:999px;
+  border:1px solid rgba(255,255,255,0.03);
+}
+.btn{
+  padding:6px 10px;
+  border-radius:8px;
+  font-size:13px;
+  color:var(--muted);
+  background:transparent;
+  border:0;
+  cursor:pointer;
+  outline:none;
+}
+.btn:active{ transform:translateY(1px) }
+
+/* small hint */
+.hint{
+  position:fixed;
+  right:18px;
+  bottom:18px;
+  color:rgba(255,255,255,0.14);
+  font-size:12px;
+}
+
+/* responsive */
+@media (max-width:420px){
+  .muyu{ width:160px; height:160px }
+  .icon{ font-size:48px; width:90px; height:90px }
+}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <div class="counter" id="counter">0</div>
+
+  <div class="muyu" id="muyu" role="button" aria-label="电子木鱼，点击以发声">
+    <div class="icon">☯</div>
+  </div>
+
+  <div class="controls">
+    <button class="btn" id="soundToggle">声音：禅咚</button>
+    <button class="btn" id="volDown">音量 -</button>
+    <button class="btn" id="volUp">音量 +</button>
+    <button class="btn" id="reset">重置</button>
+  </div>
+
+  <div class="hint">点击木鱼，享受静谧 · +1 功德</div>
+</div>
+
+<script>
+/*
+Cyber Zen — minimal SPA behavior implemented with vanilla JS
+Features:
+- click to produce sound via WebAudio (two modes: deep 'dong' and crisp 'ping')
+- counter
+- jelly press animation
+- ripple visual
+- floating "+1 功德" text
+- volume control and sound mode toggle
+*/
+
+let counter = 0;
+const counterEl = document.getElementById('counter');
+const muyu = document.getElementById('muyu');
+const app = document.getElementById('app');
+const soundToggle = document.getElementById('soundToggle');
+const volDown = document.getElementById('volDown');
+const volUp = document.getElementById('volUp');
+const resetBtn = document.getElementById('reset');
+let soundMode = 'deep'; // 'deep' or 'crisp'
+let volume = 0.8; // 0.0 - 1.0
+
+// WebAudio setup
+const AudioContext = window.AudioContext || window.webkitAudioContext;
+const audioCtx = new AudioContext();
+
+function playDeepDong(vol=1.0){
+  // two-oscillator short 'dong' with envelope
+  const now = audioCtx.currentTime;
+  const master = audioCtx.createGain();
+  master.gain.setValueAtTime(0.0001, now);
+  master.gain.exponentialRampToValueAtTime(vol, now + 0.008);
+  master.gain.exponentialRampToValueAtTime(0.0001, now + 1.2);
+  master.connect(audioCtx.destination);
+
+  const osc1 = audioCtx.createOscillator();
+  osc1.type = 'sine';
+  osc1.frequency.value = 110; // low fundamental
+  const osc2 = audioCtx.createOscillator();
+  osc2.type = 'sine';
+  osc2.frequency.value = 220; // harmonic
+
+  const bq = audioCtx.createBiquadFilter();
+  bq.type = 'lowpass';
+  bq.frequency.setValueAtTime(750, now);
+
+  const comp = audioCtx.createDynamicsCompressor();
+  osc1.connect(bq);
+  osc2.connect(bq);
+  bq.connect(comp);
+  comp.connect(master);
+
+  osc1.start(now);
+  osc2.start(now);
+  osc1.stop(now + 1.1);
+  osc2.stop(now + 1.1);
+}
+
+function playCrispPing(vol=1.0){
+  const now = audioCtx.currentTime;
+  const master = audioCtx.createGain();
+  master.gain.setValueAtTime(0.0001, now);
+  master.gain.exponentialRampToValueAtTime(vol, now + 0.002);
+  master.gain.exponentialRampToValueAtTime(0.0001, now + 0.22);
+  master.connect(audioCtx.destination);
+
+  const osc = audioCtx.createOscillator();
+  osc.type = 'triangle';
+  osc.frequency.setValueAtTime(880, now);
+  const hf = audioCtx.createBiquadFilter();
+  hf.type = 'highpass';
+  hf.frequency.setValueAtTime(800, now);
+
+  osc.connect(hf);
+  hf.connect(master);
+  osc.start(now);
+  osc.stop(now + 0.22);
+}
+
+// unified play
+function playSound(){
+  // resume context if suspended by browser policy
+  if (audioCtx.state === 'suspended') {
+    audioCtx.resume();
+  }
+  const vol = Math.max(0.01, Math.min(1.5, volume)); // clamp
+  if (soundMode === 'deep') playDeepDong(vol);
+  else playCrispPing(vol);
+}
+
+// visual helpers
+function createRipple(x, y){
+  const r = document.createElement('div');
+  r.className = 'ripple';
+  r.style.left = x + 'px';
+  r.style.top = y + 'px';
+  r.style.width = (muyu.clientWidth/2) + 'px';
+  r.style.height = r.style.width;
+  muyu.appendChild(r);
+  r.addEventListener('animationend', ()=> r.remove());
+}
+
+function createFloating(x, y){
+  const f = document.createElement('div');
+  f.className = 'floating';
+  f.textContent = '+1 功德';
+  // randomize slight horizontal offset
+  const offset = (Math.random()-0.5) * 40;
+  f.style.left = (x + offset) + 'px';
+  f.style.top = (y) + 'px';
+  app.appendChild(f);
+  f.addEventListener('animationend', ()=> f.remove());
+}
+
+// press handler
+function handlePress(e){
+  // determine click coordinates relative to muyu
+  const rect = muyu.getBoundingClientRect();
+  const x = ((e.touches?e.touches[0].clientX:e.clientX) - rect.left);
+  const y = ((e.touches?e.touches[0].clientY:e.clientY) - rect.top);
+
+  // jelly animation
+  muyu.classList.remove('pressed');
+  // force reflow
+  void muyu.offsetWidth;
+  muyu.classList.add('pressed');
+
+  // ripple
+  createRipple(x, y);
+
+  // sound
+  playSound();
+
+  // counter
+  counter++;
+  counterEl.textContent = counter;
+
+  // floating text
+  // position relative to app
+  const appRect = app.getBoundingClientRect();
+  const fx = (e.touches?e.touches[0].clientX:e.clientX);
+  const fy = (e.touches?e.touches[0].clientY:e.clientY);
+  createFloating(fx, fy);
+
+  // subtle haptic (if available)
+  try{ navigator.vibrate && navigator.vibrate(20); }catch(e){}
+}
+
+// event listeners
+muyu.addEventListener('click', handlePress);
+muyu.addEventListener('touchstart', handlePress, {passive:true});
+
+// controls
+soundToggle.addEventListener('click', ()=>{
+  soundMode = (soundMode === 'deep') ? 'crisp' : 'deep';
+  soundToggle.textContent = '声音：' + (soundMode === 'deep' ? '禅咚' : '清脆');
+});
+volDown.addEventListener('click', ()=>{ volume = Math.max(0.05, volume - 0.12); showVol();});
+volUp.addEventListener('click', ()=>{ volume = Math.min(1.6, volume + 0.12); showVol();});
+resetBtn.addEventListener('click', ()=>{ counter = 0; counterEl.textContent = counter; });
+
+// helper to show small temporary feedback for volume
+function showVol(){
+  const v = document.createElement('div');
+  v.className='floating';
+  v.style.left = '50%';
+  v.style.top = '70%';
+  v.style.transform = 'translateX(-50%)';
+  v.textContent = '音量: ' + Math.round(volume*100) + '%';
+  document.body.appendChild(v);
+  setTimeout(()=> v.remove(), 900);
+}
+
+// keyboard: space activates
+window.addEventListener('keydown', (e)=>{
+  if (e.code === 'Space') {
+    e.preventDefault();
+    // simulate center click
+    const rect = muyu.getBoundingClientRect();
+    const fake = { clientX: rect.left + rect.width/2, clientY: rect.top + rect.height/2 };
+    handlePress(fake);
+  }
+});
+
+// small GA-friendly precaution: user gesture required for audio on some browsers
+document.addEventListener('click', function initOnce(){
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  document.removeEventListener('click', initOnce);
+});
+</script>
+</body>
+</html>
